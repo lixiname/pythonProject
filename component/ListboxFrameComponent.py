@@ -50,6 +50,9 @@ class ListboxFrame(Frame,Observer,Observable):
     def get_current_element(self):
         self.listbox.curselection()
 
+    def get_list(self):
+        return self.lists
+
 
 
 

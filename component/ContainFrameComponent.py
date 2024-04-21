@@ -126,12 +126,18 @@ class InferenceNewTaskContainPage(Frame, Observable):
                 self.change_radio_label_text('next')
                 self.start_new_list_management[f'page{self.current_status}'].pack_forget()
                 if self.exist(f"page{self.current_status + 1}"):
+
                     self.start_new_list_management[f'page{self.current_status + 1}'].pack()
+                    if self.current_status + 1 == 3:
+                        task_lists = self.start_new_list_management[f'page{self.current_status - 1}'].get_task_lists()
+                        model_path = self.start_new_list_management[f'page{self.current_status }'].model_path_load()
+                        self.start_new_list_management[f'page{self.current_status + 1}'].config_task_env(task_lists, model_path)
                 else:
                     (page_key, page) = self.create_page(self.current_status + 1)
                     self.start_new_list_management[page_key] = page
                 self.current_status += 1
                 #messagebox.showinfo('提示', message)
+                print('info:'+message)
                 print("next process")
             else:
                 messagebox.showinfo('提示', message)
@@ -150,6 +156,9 @@ class InferenceNewTaskContainPage(Frame, Observable):
             new_page = InferenceTaskPage2(self.frame_middle, self.width, self.height * 3 / 4)
         elif page==3:
             new_page = InferenceTaskPage3(self.frame_middle, self.width, self.height * 3 / 4)
+            task_lists=self.start_new_list_management['page1'].get_task_lists()
+            model_path=self.start_new_list_management['page2'].model_path_load()
+            new_page.config_task_env(task_lists, model_path)
         elif page==4:
             new_page = InferenceTaskPage4(self.frame_middle, self.width, self.height * 3 / 4)
         page_key=f'page{page}'
@@ -213,15 +222,13 @@ class InferenceNewTaskContainPage(Frame, Observable):
 class TrainMainContainPage(Frame):
     def __init__(self, parent,width,height):
         Frame.__init__(self,parent)
-
+        self.pack()
         self.frame = Frame(self, width=width, height=height, bg='lightgreen')
         self.frame.pack()
 
-        self.child_fr1 = Frame(self.frame, width=width / 4 * 2, height=height, bg='blue')
-        self.child_fr1.grid(row=0, column=0)
-        self.imageFrame = ImageReadLabelFrame(self.child_fr1)
-
-        self.path_bind = StringVar()
-        self.path_bind.set('TrainMainPage')
-        self.path_text = Label(self, width=20, height=1, textvariable=self.path_bind)
-        self.path_text.pack()
+        self.title = Label(self.frame, width=20, text='训练主页面')
+        self.title.pack(side='top')
+        self.frame_extension = Frame(self.frame, width=width, height=1, bg='gold')
+        self.frame_extension.pack(side='bottom')
+        self.content = Label(self.frame, width=20, text='待定')
+        self.content.pack(side='bottom')
