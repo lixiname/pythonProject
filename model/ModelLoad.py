@@ -127,7 +127,7 @@ def ocr_recognition_model_inference(ocr_detection_result,model,image):
         single_image_result+=result['text'][0]+'\n'
         print(result)
     print("single image ocr recognition end")
-    #utf8_bytes = single_image_result.encode('utf-8')
+
     return single_image_result
 
 
