@@ -1,4 +1,5 @@
 {
   "model_path": "C:\\Users\\lenovo\\PycharmProjects\\model\\2",
+  "model_name": "model2",
   "param_path": "111"
 }

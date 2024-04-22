@@ -5,11 +5,13 @@ from tkinter import Frame, messagebox, Button, Label, StringVar
 from tkinter.ttk import Combobox, Progressbar
 
 from common.DefaultConfigPath import Load_resource_dict
+from common.JsonReader import LogRuntimeJson
+from common.TimesFormat import generate_time_stamp
 from common.observerPattern import Observer, Observable
 from component.ComboboxFrameComponent import ComboboxLoadFrame
 from component.ImageFrameComponent import MarkImageFrame
 from component.ListboxFrameComponent import ListboxFrame, ListboxMergeListFrame
-from component.PathFrameComponent import PathLoadFrame
+from component.PathFrameComponent import PathLoadFrame, PathLoadNoButtonFrame
 from component.TextFrameComponent import TextContentFrame
 
 
@@ -130,6 +132,10 @@ class InferenceTaskPage2(Frame):
 
     def get_model_path(self):
         return self.model_path
+
+    def get_model_name(self):
+        return self.combobox.get_current_model_name()
+
     def get_model_ready(self):
         if not self.model_path:
             return False
@@ -180,6 +186,7 @@ class InferenceTaskPage3(Frame,Observable):
         self.task_next_input_index = 0
         self.task_image_list=[]
         self.model_path=None
+        self.model_name=None
 
     def update_progressbar(self,current_item):
         self.frame_bottom.update()
@@ -194,7 +201,7 @@ class InferenceTaskPage3(Frame,Observable):
                 self.run_status=True
                 self.task_button_status = 'running'
                 self.button_var_bind.set('执行中，点击则暂停')
-                self.task_run()
+                self.task_start()
 
             else:
                 messagebox.showinfo('提示', "未设置输出路径")
@@ -214,8 +221,7 @@ class InferenceTaskPage3(Frame,Observable):
             self.run_status = False
             self.task_button_status = 'pause'
             self.button_var_bind.set('已暂停，点击则继续执行')
-            arg = ['__', 'continue']
-
+            #arg = ['__', 'continue']
 
 
 
@@ -228,15 +234,24 @@ class InferenceTaskPage3(Frame,Observable):
         else:
             return True
 
-    def config_task_env(self,task_image_list,model_path):
+    def config_task_env(self,task_image_list,model_config_dict):
         self.task_image_list=task_image_list
-        self.model_path=model_path
-
+        self.model_path =model_config_dict['model_path']
+        self.model_name=model_config_dict['model_name']
         self.progressbar['maximum'] = len(self.task_image_list)
         self.progressbar_label_bind.set('0/' + str(len(self.task_image_list)))
 
+
+    def task_start(self):
+        self.load_model()
+        self.task_run()
+
+    def load_model(self):
+        self.model_path
+
     def task_run(self):
-        for i in range(self.task_next_input_index,len(self.task_image_list)):
+        end=len(self.task_image_list)
+        for i in range(self.task_next_input_index,end):
             if self.run_status==True:
 
                 input_image_path=self.task_image_list[i]
@@ -245,10 +260,15 @@ class InferenceTaskPage3(Frame,Observable):
                 out_file_name=image_name.split('.')[0]+'.txt'
                 output_path=os.path.join(self.output_path,out_file_name)
                 self.write_file(output_path,output)
-
                 self.task_next_input_index += 1
                 self.update_progressbar(i+1)
                 self.progressbar_label_bind.set(str(i + 1) + '/' + str(len(self.task_image_list)))
+
+                if i==end-1:
+                    self.task_button.config(state=tkinter.DISABLED)
+                    self.button_var_bind.set('已全部完成')
+
+
 
             else:
                 break
@@ -262,6 +282,234 @@ class InferenceTaskPage3(Frame,Observable):
     def model_process(self,input_image_path):
         return input_image_path
 
+
+
+    def logRuntimeJson(self):
+        time_stamp = generate_time_stamp()
+        model_name=self.model_name
+        logJsonWriter=LogRuntimeJson(model_name,time_stamp)
+        runtime_config_dict={}
+
+        task_not_process_image_list = []
+        end = len(self.task_image_list)
+        for i in range(self.task_next_input_index, end):
+            task_not_process_image_list.append(self.task_image_list[i])
+
+        runtime_config_dict['task_not_process_image_list']=task_not_process_image_list
+        runtime_config_dict['task_all_image_amount'] = end
+        runtime_config_dict['model_path']=self.model_path
+        runtime_config_dict['model_name'] = self.model_name
+        runtime_config_dict['output_path'] = self.output_path
+        logJsonWriter.logJson(runtime_config_dict)
+
+
+
+
+
+
+
+class InferenceContinueTaskPage3(Frame,Observable):
+    def __init__(self, parent,width,height):
+        Frame.__init__(self, parent)
+        Observable.__init__(self)
+        self.pack()
+        self.frame = Frame(self, width=width, height=height, bg='lightgreen')
+        self.frame.pack()
+
+        self.title = Label(self.frame, width=20, height=1, text='选择中断的任务页面')
+        self.title.pack(side='top')
+        self.frame_extension = Frame(self.frame, width=width, height=1, bg='gold')
+        self.frame_extension.pack(side='bottom')
+        self.frame_bottom = Frame(self.frame, width=width, height=height, bg='lightgreen')
+        self.frame_bottom.pack(side='bottom')
+
+        self.combobox = ComboboxLoadFrame(self.frame_bottom)
+        self.combobox.pack(side='top')
+
+        # 任务继续部分
+        self.button_var_bind = StringVar()
+        self.button_var_bind.set('开始任务')
+        self.task_button = Button(self.frame_bottom, textvariable=self.button_var_bind,
+                                  command=lambda: self.start_or_pause_task())
+        self.task_button.pack(side='bottom')
+        self.task_button_status = 'start'
+
+        self.frame_progressbar = Frame(self.frame_bottom, width=width, height=height, bg='lightgreen')
+        self.frame_progressbar.pack(side='bottom')
+        self.progressbar = Progressbar(self.frame_progressbar, orient=tkinter.HORIZONTAL, length=200,
+                                       mode='determinate')
+
+        self.progressbar['value'] = 0
+        self.progressbar.pack(side='left')
+        self.progressbar_label_bind = StringVar()
+        self.progressbar_label = Label(self.frame_progressbar, width=20, height=1,
+                                       textvariable=self.progressbar_label_bind)
+        self.progressbar_label.pack(side='right')
+        self.output_path_load()
+        # 控制任务是否暂停
+        self.run_status = False
+        self.task_next_input_index = 0
+        self.task_image_list = []
+        self.model_path = None
+        self.model_name = None
+
+        # 详情
+        self.frame_config = Frame(self.frame_bottom)
+        self.frame_config.pack(side='bottom')
+        # 左边栏
+        self.frame_config_left = Frame(self.frame_config)
+        self.frame_config_left.pack(side='left')
+        self.frame_config_right = Frame(self.frame_config)
+        self.frame_config_right.pack(side='right')
+
+        self.frame_config_left_top = Frame(self.frame_config_left)
+        self.frame_config_left_top.pack(side='top')
+        self.output_path_text = PathLoadNoButtonFrame(self.frame_config_left_top, label="输出的位置")
+        self.frame_config_left_bottom = Frame(self.frame_config_left)
+        self.frame_config_left_bottom.pack(side='bottom')
+        self.model_path_text = PathLoadNoButtonFrame(self.frame_config_left_bottom, label="选择的算法")
+
+        self.textContent = TextContentFrame(self.frame_config_left)
+        self.textContent.pack(side='bottom')
+
+
+        #右边栏待处理图像列表
+        self.frame_right_child_top = Frame(self.frame_config_right, width=width, height=height, bg='gold')
+        self.frame_right_child_top.pack(side='top')
+        self.frame_right_child_bottom = Frame(self.frame_config_right, width=width, height=height, bg='gold')
+        self.frame_right_child_bottom.pack(side='bottom')
+
+        self.frame_right_child_left = Frame(self.frame_right_child_bottom, width=width, height=height, bg='gold')
+        self.frame_right_child_left.pack(side='left')
+        self.frame_right_child_right = Frame(self.frame_right_child_bottom, width=width, height=height, bg='gold')
+        self.frame_right_child_right.pack(side='right')
+
+        self.listbox = ListboxFrame(self.frame_right_child_right, width=width, height=int(height // 2))
+        images_dir = Load_resource_dict.default_image_load_path()
+        self.pathLoadFrame = PathLoadNoButtonFrame(self.frame_right_child_top, label="待识别图片列表")
+        self.pathLoadFrame.addObserver(self.listbox)
+        self.imageFrame = MarkImageFrame(self.frame_right_child_left)
+        self.listbox.addObserver(self.imageFrame)
+        #self.pathLoadFrame.notifyObservers(self.pathLoadFrame.get_path())
+
+
+        self.combobox.addObserver(self.output_path_text)
+        self.combobox.addObserver(self.model_path_text)
+        self.combobox.addObserver(self.textContent)
+        self.combobox.addObserver(self.pathLoadFrame)
+        self.model_path = None
+        self.combobox.init_default_model()
+
+
+
+    def update_progressbar(self,current_item):
+        self.frame_bottom.update()
+        self.progressbar['value'] = current_item
+        time.sleep(1)
+
+
+    def start_or_pause_task(self):
+        self.output_path_load()
+        if self.task_button_status == 'start':
+            if self.get_task_output_ready():
+                self.run_status=True
+                self.task_button_status = 'running'
+                self.button_var_bind.set('执行中，点击则暂停')
+                self.task_start()
+
+            else:
+                messagebox.showinfo('提示', "未设置输出路径")
+
+
+        elif self.task_button_status == 'pause':
+            if self.get_task_output_ready():
+                self.run_status = True
+                self.task_button_status = 'running'
+                self.button_var_bind.set('执行中，点击则暂停')
+                self.task_run()
+            else:
+                messagebox.showinfo('提示', "未设置输出路径")
+
+
+        elif self.task_button_status == 'running':
+            self.run_status = False
+            self.task_button_status = 'pause'
+            self.button_var_bind.set('已暂停，点击则继续执行')
+            #arg = ['__', 'continue']
+
+
+    def output_path_load(self):
+        self.output_path =self.pathOutputFrame.get_path()
+    def get_task_output_ready(self):
+        if not self.output_path:
+            return False
+        else:
+            return True
+
+    def config_task_env(self,task_image_list,model_config_dict):
+        self.task_image_list=task_image_list
+        self.model_path =model_config_dict['model_path']
+        self.model_name=model_config_dict['model_name']
+        self.progressbar['maximum'] = len(self.task_image_list)
+        self.progressbar_label_bind.set('0/' + str(len(self.task_image_list)))
+
+
+    def task_start(self):
+        self.load_model()
+        self.task_run()
+
+    def load_model(self):
+        self.model_path
+
+    def task_run(self):
+        end=len(self.task_image_list)
+        for i in range(self.task_next_input_index,end):
+            if self.run_status==True:
+
+                input_image_path=self.task_image_list[i]
+                output=self.model_process(input_image_path)
+                image_name=os.path.basename(input_image_path.rstrip('/'))
+                out_file_name=image_name.split('.')[0]+'.txt'
+                output_path=os.path.join(self.output_path,out_file_name)
+                self.write_file(output_path,output)
+                self.task_next_input_index += 1
+                self.update_progressbar(i+1)
+                self.progressbar_label_bind.set(str(i + 1) + '/' + str(len(self.task_image_list)))
+
+                if i==end-1:
+                    self.task_button.config(state=tkinter.DISABLED)
+                    self.button_var_bind.set('已全部完成')
+
+
+
+            else:
+                break
+
+    def write_file(self,output_path,output):
+        with open(output_path,'w') as f:
+            f.write(output)
+            f.write('\n')
+
+    def model_process(self,input_image_path):
+        return input_image_path
+
+    def logRuntimeJson(self):
+        time_stamp = generate_time_stamp()
+        model_name=self.model_name
+        logJsonWriter=LogRuntimeJson(model_name,time_stamp)
+        runtime_config_dict={}
+
+        task_not_process_image_list = []
+        end = len(self.task_image_list)
+        for i in range(self.task_next_input_index, end):
+            task_not_process_image_list.append(self.task_image_list[i])
+
+        runtime_config_dict['task_not_process_image_list']=task_not_process_image_list
+        runtime_config_dict['task_all_image_amount'] = end
+        runtime_config_dict['model_path']=self.model_path
+        runtime_config_dict['model_name'] = self.model_name
+        runtime_config_dict['output_path'] = self.output_path
+        logJsonWriter.logJson(runtime_config_dict)
 
 
 
@@ -301,47 +549,5 @@ class InferenceTaskPage4(Frame):
         self.textContentFrame = TextContentFrame(self.frame_right_child_left)
         self.taskListbox.addObserver(self.textContentFrame)
         self.taskPathLoadFrame.notifyObservers(self.taskPathLoadFrame.get_path())
-
-
-
-
-class InferenceContinueTaskPage1(Frame):
-    def __init__(self, parent,width,height):
-        Frame.__init__(self, parent)
-        self.frame = Frame(self, width=width, height=height, bg='lightgreen')
-        self.frame.pack()
-        #左右栏
-        self.child_fr1 = Frame(self.frame, width=width / 4 * 2, height=height, bg='blue')
-        self.child_fr1.grid(row=0, column=0)
-        self.child_fr2 = Frame(self.frame, width=width / 4, height=height, bg='yellow')
-        self.child_fr2.grid(row=0, column=2)
-
-        self.listbox = ListboxFrame(self.child_fr2, width=width, height=int(height // 2))
-        out_dir= Load_resource_dict.default_label_output_path()
-        images_dir=Load_resource_dict.default_image_load_path()
-        self.pathLoadFrame = PathLoadFrame(self.child_fr2, images_dir, text="原始image加载路径")
-        self.pathLoadFrame.addObserver(self.listbox)
-        self.pathSaveFrame = PathLoadFrame(self.child_fr2, out_dir, text="保存标注结果的路径")
-
-        self.imageFrame = MarkImageFrame(self.child_fr1)
-        self.listbox.addObserver(self.imageFrame)
-        self.save_and_next_button = Button(self.child_fr2, text="保存",
-                                  command=lambda: self.save("save_and_next"))
-        self.save_and_next_button.pack()
-        self.pathLoadFrame.notifyObservers(self.pathLoadFrame.get_path())
-        #self.next_button = Button(self.child_fr2, text="不保存直接选下一个",command=lambda: self.save("next"))
-        #self.next_button.pack()
-
-    def save(self, saveFlage):
-        if saveFlage == "save_and_next":
-            image_rectangles, image_rectangle_name = self.imageFrame.get_image_info()
-            path = os.path.join(self.pathSaveFrame.get_path(), image_rectangle_name)
-            with open(path,'w') as f:
-                for item in image_rectangles:
-                    str_tuple = tuple(map(str, item))
-                    result = ",".join(str_tuple)
-                    f.write(result)
-                    f.write('\n')
-            messagebox.showinfo('提示', '格式label已成功导出')
 
 

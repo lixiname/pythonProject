@@ -4,7 +4,7 @@ from tkinter.filedialog import askdirectory
 from tkinter.ttk import Combobox
 
 from common.DefaultConfigPath import Load_resource_dict
-from common.JsonReader import read_model_train_config
+from common.JsonReader import read_model_config
 from common.observerPattern import Observable
 
 
@@ -27,10 +27,14 @@ class ComboboxLoadFrame(Frame,Observable):
         self.model_description_path_list = os.listdir(self.description_dir)
         self.model_path_list = os.listdir(self.model_dir)
         self.current_model_path=None
+        self.current_model_name = None
         self.current_model_description_path=None
 
     def get_current_model_path(self):
         return self.current_model_path
+
+    def get_current_model_name(self):
+        return self.current_model_name
 
     def select_change(self,event):
         self.change_model()
@@ -39,8 +43,9 @@ class ComboboxLoadFrame(Frame,Observable):
 
         model_file_name = self.model_dict[model_name]
         model_config_path = os.path.join(self.model_dir, model_file_name)
-        json_content=read_model_train_config(model_config_path)
+        json_content=read_model_config(model_config_path)
         self.current_model_path =json_content['model_path']
+        self.current_model_name = json_content['model_name']
 
         file_name=self.model_description_dict[model_name]
         path=os.path.join(self.description_dir,file_name)
