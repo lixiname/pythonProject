@@ -5,17 +5,17 @@ import os
 class Load_resource_dict:
     @staticmethod
     def default_image_load_path():
-        train_dir_path = os.path.join(os.getcwd(), "data", 'train_images')
+        train_dir_path = os.path.join(os.getcwd(), "data", 'test_images')
         return train_dir_path
 
     @staticmethod
     def default_label_load_path():
-        label_dir_path = os.path.join(os.getcwd(), "data", 'train_gts')
+        label_dir_path = os.path.join(os.getcwd(), "data", 'test_gts')
         return label_dir_path
 
     @staticmethod
     def default_label_output_path():
-        label_dir_path = os.path.join(os.getcwd(), "data", 'train_out_gts')
+        label_dir_path = os.path.join(os.getcwd(), "data", 'test_out_gts')
         return label_dir_path
 
     @staticmethod

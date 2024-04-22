@@ -1,5 +1,5 @@
 {
-  "model_path": "C:\\Users\\lenovo\\PycharmProjects\\model\\2",
+  "model_path": "C:\\Users\\lenovo\\PycharmProjects\\pythonProject\\assert\\wts\\pytorch_model.pt",
   "model_name": "model2",
   "param_path": "111"
 }

@@ -50,7 +50,8 @@ class ComboboxLoadFrame(Frame,Observable):
         file_name=self.model_description_dict[model_name]
         path=os.path.join(self.description_dir,file_name)
         self.current_model_description_path = path
-        arg=['__',path]
+        model_wts_path=self.current_model_path
+        arg=['__',path,model_wts_path]
         print('model_load_path')
         print(self.current_model_path)
         self.notifyObservers(arg)

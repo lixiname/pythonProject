@@ -53,6 +53,13 @@ class ListboxFrame(Frame,Observer,Observable):
     def get_list(self):
         return self.lists
 
+    def get_path_list(self):
+        image_path_list=[]
+        for item in self.lists:
+            path = os.path.join(self.dir, item)
+            image_path_list.append(path)
+        return image_path_list
+
 
 
 

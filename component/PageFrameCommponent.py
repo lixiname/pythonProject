@@ -4,6 +4,8 @@ import tkinter
 from tkinter import Frame, messagebox, Button, Label, StringVar
 from tkinter.ttk import Combobox, Progressbar
 
+import cv2
+
 from common.DefaultConfigPath import Load_resource_dict
 from common.JsonReader import LogRuntimeJson
 from common.TimesFormat import generate_time_stamp
@@ -13,6 +15,7 @@ from component.ImageFrameComponent import MarkImageFrame
 from component.ListboxFrameComponent import ListboxFrame, ListboxMergeListFrame
 from component.PathFrameComponent import PathLoadFrame, PathLoadNoButtonFrame
 from component.TextFrameComponent import TextContentFrame
+from model.ModelLoad import load_model, load_model_wts, ocr_recognition_model_inference, ocr_detection_model_inference
 
 
 class InferenceTaskPage1(Frame,Observer):
@@ -79,7 +82,7 @@ class InferenceTaskPage1(Frame,Observer):
 
     def merge_task_lists(self):
         task_list=self.taskListbox.merge_task_lists()
-        all_image_list=self.listbox.get_list()
+        all_image_list=self.listbox.get_path_list()
         all_image_dict={}
         for item in all_image_list:
             image_name=os.path.basename(item.rstrip('/'))
@@ -104,8 +107,9 @@ class InferenceTaskPage1(Frame,Observer):
 
 
 
-class InferenceTaskPage2(Frame):
+class InferenceTaskPage2(Frame,Observer):
     def __init__(self, parent,width,height):
+        Observer.__init__(self)
         Frame.__init__(self, parent)
         self.pack()
         self.frame = Frame(self, width=width, height=height, bg='lightgreen')
@@ -123,9 +127,11 @@ class InferenceTaskPage2(Frame):
         self.textContent = TextContentFrame(self.frame_bottom)
         self.textContent.pack(side='bottom')
         self.combobox.addObserver(self.textContent)
+        self.combobox.addObserver(self)
         self.model_path=None
         self.combobox.init_default_model()
-
+        self.model_loading=None
+        self.model_loading_status=False
 
     def model_path_load(self):
         self.model_path =self.combobox.get_current_model_path()
@@ -133,14 +139,34 @@ class InferenceTaskPage2(Frame):
     def get_model_path(self):
         return self.model_path
 
+    def get_model(self):
+        return self.model_loading
+
     def get_model_name(self):
         return self.combobox.get_current_model_name()
 
     def get_model_ready(self):
-        if not self.model_path:
-            return False
-        else:
+        if self.model_loading_status:
             return True
+        else:
+            return False
+
+    def updates(self,arg):
+        self.model_path_load()
+        if self.model_path:
+            model_config_dict={
+                'model_name':self.get_model_name(),
+                'model_wight_path':self.get_model_path(),
+            }
+            model=load_model(model_config_dict)
+            self.model_loading=model
+            #self.model_loading=load_model_wts(model, model_config_dict)
+            self.model_loading_status=True
+            print("load model")
+            print(self.model_loading)
+        else:
+            messagebox.showinfo('提示', "模型加载错误")
+
 
 
 class InferenceTaskPage3(Frame,Observable):
@@ -187,6 +213,7 @@ class InferenceTaskPage3(Frame,Observable):
         self.task_image_list=[]
         self.model_path=None
         self.model_name=None
+        self.model=None
 
     def update_progressbar(self,current_item):
         self.frame_bottom.update()
@@ -201,7 +228,7 @@ class InferenceTaskPage3(Frame,Observable):
                 self.run_status=True
                 self.task_button_status = 'running'
                 self.button_var_bind.set('执行中，点击则暂停')
-                self.task_start()
+                self.task_run()
 
             else:
                 messagebox.showinfo('提示', "未设置输出路径")
@@ -238,16 +265,9 @@ class InferenceTaskPage3(Frame,Observable):
         self.task_image_list=task_image_list
         self.model_path =model_config_dict['model_path']
         self.model_name=model_config_dict['model_name']
+        self.model=model_config_dict['model']
         self.progressbar['maximum'] = len(self.task_image_list)
         self.progressbar_label_bind.set('0/' + str(len(self.task_image_list)))
-
-
-    def task_start(self):
-        self.load_model()
-        self.task_run()
-
-    def load_model(self):
-        self.model_path
 
     def task_run(self):
         end=len(self.task_image_list)
@@ -267,20 +287,20 @@ class InferenceTaskPage3(Frame,Observable):
                 if i==end-1:
                     self.task_button.config(state=tkinter.DISABLED)
                     self.button_var_bind.set('已全部完成')
-
-
-
             else:
                 break
 
     def write_file(self,output_path,output):
-        with open(output_path,'w') as f:
+        with open(output_path,'w',encoding='utf-8') as f:
             f.write(output)
-            f.write('\n')
+            #f.write('\n')
 
 
     def model_process(self,input_image_path):
-        return input_image_path
+        image = cv2.imread(input_image_path)
+        ocr_detection_result=ocr_detection_model_inference(self.model,image)
+        ocr_recognition_result=ocr_recognition_model_inference(ocr_detection_result, self.model, image)
+        return ocr_recognition_result
 
 
 
@@ -297,7 +317,7 @@ class InferenceTaskPage3(Frame,Observable):
 
         runtime_config_dict['task_not_process_image_list']=task_not_process_image_list
         runtime_config_dict['task_all_image_amount'] = end
-        runtime_config_dict['model_path']=self.model_path
+        runtime_config_dict['model_wts_path']=self.model_path
         runtime_config_dict['model_name'] = self.model_name
         runtime_config_dict['output_path'] = self.output_path
         logJsonWriter.logJson(runtime_config_dict)
@@ -486,9 +506,8 @@ class InferenceContinueTaskPage3(Frame,Observable):
                 break
 
     def write_file(self,output_path,output):
-        with open(output_path,'w') as f:
+        with open(output_path,'w',encoding='utf-8') as f:
             f.write(output)
-            f.write('\n')
 
     def model_process(self,input_image_path):
         return input_image_path

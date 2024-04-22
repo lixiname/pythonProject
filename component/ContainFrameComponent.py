@@ -133,6 +133,8 @@ class InferenceNewTaskContainPage(Frame, Observable):
                         model_config_dict={}
                         model_config_dict["model_path"]=self.start_new_list_management[f'page{self.current_status }'].get_model_path()
                         model_config_dict['model_name'] =self.start_new_list_management[f'page{self.current_status }'].get_model_name()
+                        model_config_dict['model'] = self.start_new_list_management[ f'page{self.current_status}'].get_model()
+
                         self.start_new_list_management[f'page{self.current_status + 1}'].config_task_env(task_lists, model_config_dict)
                     elif self.current_status+1 == 4:
                         self.start_new_list_management[f'page{self.current_status }'].logRuntimeJson()
@@ -166,6 +168,7 @@ class InferenceNewTaskContainPage(Frame, Observable):
             model_config_dict = {}
             model_config_dict["model_path"] = self.start_new_list_management['page2'].get_model_path()
             model_config_dict['model_name'] = self.start_new_list_management['page2'].get_model_name()
+            model_config_dict['model'] = self.start_new_list_management['page2'].get_model()
             new_page.config_task_env(task_lists, model_config_dict)
         elif page==4:
             new_page = InferenceTaskPage4(self.frame_middle, self.width, self.height * 3 / 4)
