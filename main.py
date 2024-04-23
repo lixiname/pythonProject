@@ -8,6 +8,7 @@ from tkinter import messagebox
 
 import matplotlib.pyplot as plt
 
+from common import NetState
 from common.DefaultConfigPath import Load_resource_dict
 from common.observerPattern import Observer
 from component.ImageFrameComponent import ImageReadLabelFrame, MarkImageFrame
@@ -156,6 +157,9 @@ def test():
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+    NetState.getSystemInitInformation()
+    NetState.getMemoryAllocatedNowAndChangedSizePrint()
+    NetState.printMemoryNowReserved()
     open_windows_demo()
 
     print_hi('PyCharm')
