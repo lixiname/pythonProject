@@ -6,11 +6,11 @@
 
 系统整体功能如下所示
 
-![图片-整体结构图](./https://github.com/lixiname/pythonProject/blob/master/construct.png "主界面分为训练和推理两大功能，其中推理功能又包括了启动新任务和继续旧任务")
+![图片-整体结构图](https://github.com/lixiname/pythonProject/blob/master/construct.png "主界面分为训练和推理两大功能，其中推理功能又包括了启动新任务和继续旧任务")
 
 
 
-![图片-程序主窗口界面功能](./https://github.com/lixiname/pythonProject/blob/master/mainwindows.png "主界面分为训练和推理两大功能，其中推理功能又包括了启动新任务和继续旧任务")
+![图片-程序主窗口界面功能](https://github.com/lixiname/pythonProject/blob/master/mainwindows.png "主界面分为训练和推理两大功能，其中推理功能又包括了启动新任务和继续旧任务")
 
 ---
 
